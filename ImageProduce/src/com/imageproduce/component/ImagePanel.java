@@ -4,7 +4,6 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
-import java.awt.MediaTracker;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
@@ -19,6 +18,11 @@ import com.imageproduce.bean.GraphicsScale;
 
 public abstract class ImagePanel extends JPanel {
 	protected final int PaneWidth = 10;
+	protected final String OnlyRGB = "rgb";
+	protected final String R = "r";
+	protected final String G = "g";
+	protected final String B = "b";
+	protected final String A = "a";
 	protected GraphicsScale scale;
 	protected int x, y;
 	protected Image sorImage;
@@ -31,7 +35,7 @@ public abstract class ImagePanel extends JPanel {
 	public ImagePanel() {
 		this.scale = new GraphicsScale(this);
 		try {
-			this.sorImage = ImageIO.read(new File("data\\horse.jpg"));
+			this.sorImage = ImageIO.read(new File("data\\nyo.jpg"));
 		} catch (IOException e1) {
 			e1.printStackTrace();
 		}
@@ -44,11 +48,10 @@ public abstract class ImagePanel extends JPanel {
 			}
 		});
 		setBorder(new BevelBorder(BevelBorder.LOWERED, null, null, null, null));
-
 	}
 
 	// 繪透明圖
-	protected void transparentize(Graphics g) {
+	protected void paintTramsparentImage(Graphics g) {
 		BufferedImage bi = new BufferedImage(sorImage.getWidth(null), sorImage.getHeight(null),
 				BufferedImage.TYPE_4BYTE_ABGR);
 		Graphics2D g2d = bi.createGraphics();
@@ -64,58 +67,49 @@ public abstract class ImagePanel extends JPanel {
 					alpha = 255;
 				}
 				alpha <<= 24;
-				color = this.getPureColor(color, "a");
+				color = this.getPureColor(color, OnlyRGB);
 				color |= alpha;
 				bi.setRGB(x, y, color);
 			}
 		}
-		g2d.drawImage(bi, 0, 0, null);
-		System.out.println("Draw finish");
+
 		this.desImage = bi;
-		
-		/*
-		MediaTracker mt=new MediaTracker(this);
-		mt.addImage(bi, 0);
-		try {
-			mt.waitForAll();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		*///
-		
-		assert false: this.scale.getX1();
-		g.drawImage(bi, this.scale.getX1(), this.scale.getY1(), this.scale.getX2(), this.scale.getY2(), null);
+		g.drawImage(bi, this.scale.getX1(), this.scale.getY1(), this.scale.getX2(), this.scale.getY2(), 0, 0,
+				this.sorImage.getWidth(null), this.sorImage.getHeight(null), null);
 	}
 
 	protected int getPureColor(int color, String rgbStr) {
+		int c = -1;
 		switch (rgbStr.toLowerCase().trim()) {
-		case "a":
-			color &= 0xff000000;
+		case OnlyRGB:
+			c = color & 0xffffff;
 			break;
-		case "r":
-			color &= 0xff0000;
+		case R:
+			c = color & 0xff0000;
 			break;
-		case "g":
-			color &= 0x00ff00;
+		case G:
+			c = color & 0x00ff00;
 			break;
-		case "b":
-			color &= 0x0000ff;
+		case B:
+			c = color & 0x0000ff;
+			break;
+		case A:
+			c = color & 0xff000000;
 			break;
 		default:
-			color = -1;
+			c = -1;
 			break;
 		}
-		return color;
+		return c;
 	}
 
 	protected boolean checkRange(int color) {
 		boolean res = false;
-		int r = this.getPureColor(color, "r");
+		int r = this.getPureColor(color, R);
 		r >>= 16;
-		int g = this.getPureColor(color, "g");
+		int g = this.getPureColor(color, G);
 		g >>= 8;
-		int b = this.getPureColor(color, "b");
+		int b = this.getPureColor(color, B);
 		// b >>= 0;
 		if (r >= this.colorRange && g >= this.colorRange && b >= this.colorRange) {
 			res = true;
@@ -123,11 +117,17 @@ public abstract class ImagePanel extends JPanel {
 		return res;
 	}
 
+	protected void paintPrimaryImage(Graphics g) {
+		g.drawImage(this.sorImage, this.scale.getX1(), this.scale.getY1(), this.scale.getX2(), this.scale.getY2(), 0, 0,
+				this.sorImage.getWidth(null), this.sorImage.getHeight(null), null);
+	}
+
 	@Override
 	protected void paintComponent(Graphics g) {
 		super.paintComponent(g);
 		this.mesh(g);
-		this.transparentize(g);
+//		this.paintPrimaryImage(g);
+//		this.paintTramsparentImage(g);
 	}
 
 	protected void mesh(Graphics g) {
