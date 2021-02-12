@@ -9,6 +9,7 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 
+import com.imageproduce.bean.ImageData;
 import com.imageproduce.component.ImagePanel;
 
 import javax.swing.JLabel;
@@ -55,13 +56,13 @@ public class Transparency extends JFrame {
 		panel.add(panel_1);
 		panel_1.setLayout(new CardLayout(0, 0));
 
-		ImagePanel imagePanel_source = new ImagePanel() {
+		ImagePanel<ImageData> imagePanel_source = new ImagePanel<ImageData>() {
 
 			@Override
-			protected void paintComponent(Graphics g) {
-				super.paintComponent(g);
-				this.paintPrimaryImage(g);
+			protected ImageProcess paintImage(Graphics g) {
+				return ImageProcess.Default;
 			}
+
 		};
 		panel_1.add(imagePanel_source, "name_620937426926000");
 
@@ -69,13 +70,13 @@ public class Transparency extends JFrame {
 		panel.add(panel_2);
 		panel_2.setLayout(new CardLayout(0, 0));
 
-		ImagePanel imagePanel_destination = new ImagePanel() {
+		ImagePanel<ImageData> imagePanel_destination = new ImagePanel<ImageData>() {
 
 			@Override
-			protected void paintComponent(Graphics g) {
-				super.paintComponent(g);
-				this.paintTramsparentImage(g);
+			protected ImageProcess paintImage(Graphics g) {
+				return ImageProcess.Transparence;
 			}
+
 		};
 		panel_2.add(imagePanel_destination, "name_613935159229600");
 

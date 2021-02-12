@@ -16,22 +16,90 @@ import javax.swing.border.BevelBorder;
 
 import com.imageproduce.bean.GraphicsScale;
 
-public abstract class ImagePanel extends JPanel {
-	protected final int PaneWidth = 10;
-	protected final String OnlyRGB = "rgb";
-	protected final String R = "r";
-	protected final String G = "g";
-	protected final String B = "b";
-	protected final String A = "a";
+public abstract class ImagePanel<T> extends JPanel {
+	protected static final int PaneWidth = 10;
+	protected static final String OnlyRGB = "rgb";
+	protected static final String R = "r";
+	protected static final String G = "g";
+	protected static final String B = "b";
+	protected static final String A = "a";
+
 	protected GraphicsScale scale;
 	protected int x, y;
 	protected Image sorImage;
 	protected Image desImage;
-	protected int colorRange = 210;
+	protected InRange inRange = new InRange(10);
+
+	protected enum ImageProcess {
+		Default, Transparence
+	}
+
+	protected class InRange {
+		private Color color;
+		private int rnage = 5;
+
+		protected InRange(int range) {
+			this.color = new Color(255, 255, 255);
+			this.rnage = range;
+		}
+
+		protected int getRnage() {
+			return rnage;
+		}
+
+		protected void setRnage(int rnage) {
+			this.rnage = rnage;
+		}
+
+		protected Color getColor() {
+			return color;
+		}
+
+		protected void setColor(Color color) {
+			this.color = color;
+		}
+
+		protected boolean inRange(int singleColor, String rgbSign) {
+			boolean res = false;
+			switch (rgbSign.toLowerCase().trim()) {
+			case R:
+				res = singleColor >= this.color.getRed() - this.rnage
+						&& singleColor <= this.color.getRed() + this.rnage;
+				break;
+			case G:
+				res = singleColor >= this.color.getGreen() - this.rnage
+						&& singleColor <= this.color.getGreen() + this.rnage;
+				break;
+			case B:
+				res = singleColor >= this.color.getBlue() - this.rnage
+						&& singleColor <= this.color.getBlue() + this.rnage;
+				break;
+			default:
+				res = false;
+				break;
+			}
+			return res;
+		}
+
+		protected int getR() {
+			return this.color.getRed();
+		}
+
+		protected int getG() {
+			return this.color.getGreen();
+		}
+
+		protected int getB() {
+			return this.color.getBlue();
+		}
+	}
+
+	protected T t;
 
 	/**
 	 * Create the panel.
 	 */
+
 	public ImagePanel() {
 		this.scale = new GraphicsScale(this);
 		try {
@@ -50,6 +118,14 @@ public abstract class ImagePanel extends JPanel {
 		setBorder(new BevelBorder(BevelBorder.LOWERED, null, null, null, null));
 	}
 
+	public T getT() {
+		return t;
+	}
+
+	public void setT(T t) {
+		this.t = t;
+	}
+
 	// 繪透明圖
 	protected void paintTramsparentImage(Graphics g) {
 		BufferedImage bi = new BufferedImage(sorImage.getWidth(null), sorImage.getHeight(null),
@@ -61,7 +137,7 @@ public abstract class ImagePanel extends JPanel {
 		for (int y = bi.getMinY(); y < bi.getHeight(); y++) {
 			for (int x = bi.getMinX(); x < bi.getWidth(); x++) {
 				int color = bi.getRGB(x, y);
-				if (this.checkRange(color)) {
+				if (this.checkInRange(color)) {
 					alpha = 0;
 				} else {
 					alpha = 255;
@@ -78,9 +154,9 @@ public abstract class ImagePanel extends JPanel {
 				this.sorImage.getWidth(null), this.sorImage.getHeight(null), null);
 	}
 
-	protected int getPureColor(int color, String rgbStr) {
+	protected int getPureColor(int color, String rgbSign) {
 		int c = -1;
-		switch (rgbStr.toLowerCase().trim()) {
+		switch (rgbSign.toLowerCase().trim()) {
 		case OnlyRGB:
 			c = color & 0xffffff;
 			break;
@@ -103,7 +179,7 @@ public abstract class ImagePanel extends JPanel {
 		return c;
 	}
 
-	protected boolean checkRange(int color) {
+	protected boolean checkInRange(int color) {
 		boolean res = false;
 		int r = this.getPureColor(color, R);
 		r >>= 16;
@@ -111,7 +187,7 @@ public abstract class ImagePanel extends JPanel {
 		g >>= 8;
 		int b = this.getPureColor(color, B);
 		// b >>= 0;
-		if (r >= this.colorRange && g >= this.colorRange && b >= this.colorRange) {
+		if (this.inRange.inRange(r, R) && this.inRange.inRange(g, G) && this.inRange.inRange(b, B)) {
 			res = true;
 		}
 		return res;
@@ -120,14 +196,24 @@ public abstract class ImagePanel extends JPanel {
 	protected void paintPrimaryImage(Graphics g) {
 		g.drawImage(this.sorImage, this.scale.getX1(), this.scale.getY1(), this.scale.getX2(), this.scale.getY2(), 0, 0,
 				this.sorImage.getWidth(null), this.sorImage.getHeight(null), null);
+
+	}
+
+	abstract protected ImageProcess paintImage(Graphics g);
+
+	protected void processImage(Graphics g) {
+		if (paintImage(g) == ImageProcess.Default) {
+			this.paintPrimaryImage(g);
+		} else {
+			this.paintTramsparentImage(g);
+		}
 	}
 
 	@Override
 	protected void paintComponent(Graphics g) {
 		super.paintComponent(g);
 		this.mesh(g);
-//		this.paintPrimaryImage(g);
-//		this.paintTramsparentImage(g);
+		processImage(g);
 	}
 
 	protected void mesh(Graphics g) {
