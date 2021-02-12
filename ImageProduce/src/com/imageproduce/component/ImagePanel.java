@@ -1,23 +1,23 @@
 package com.imageproduce.component;
 
+import java.awt.AWTException;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Image;
+import java.awt.Robot;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
 
-import javax.imageio.ImageIO;
 import javax.swing.JPanel;
 import javax.swing.border.BevelBorder;
 
 import com.imageproduce.bean.GraphicsScale;
+import com.imageproduce.controller.GraphicsManager;
 
-public abstract class ImagePanel<T> extends JPanel {
-	protected static final int PaneWidth = 10;
+public abstract class ImagePanel extends JPanel {
+	protected static final int PaneWidth = 15;
 	protected static final String OnlyRGB = "rgb";
 	protected static final String R = "r";
 	protected static final String G = "g";
@@ -26,112 +26,43 @@ public abstract class ImagePanel<T> extends JPanel {
 
 	protected GraphicsScale scale;
 	protected int x, y;
-	protected Image sorImage;
-	protected Image desImage;
-	protected InRange inRange = new InRange(10);
+	protected GraphicsManager imgDataManager;
 
 	protected enum ImageProcess {
 		Default, Transparence
 	}
 
-	protected class InRange {
-		private Color color;
-		private int rnage = 5;
-
-		protected InRange(int range) {
-			this.color = new Color(255, 255, 255);
-			this.rnage = range;
-		}
-
-		protected int getRnage() {
-			return rnage;
-		}
-
-		protected void setRnage(int rnage) {
-			this.rnage = rnage;
-		}
-
-		protected Color getColor() {
-			return color;
-		}
-
-		protected void setColor(Color color) {
-			this.color = color;
-		}
-
-		protected boolean inRange(int singleColor, String rgbSign) {
-			boolean res = false;
-			switch (rgbSign.toLowerCase().trim()) {
-			case R:
-				res = singleColor >= this.color.getRed() - this.rnage
-						&& singleColor <= this.color.getRed() + this.rnage;
-				break;
-			case G:
-				res = singleColor >= this.color.getGreen() - this.rnage
-						&& singleColor <= this.color.getGreen() + this.rnage;
-				break;
-			case B:
-				res = singleColor >= this.color.getBlue() - this.rnage
-						&& singleColor <= this.color.getBlue() + this.rnage;
-				break;
-			default:
-				res = false;
-				break;
-			}
-			return res;
-		}
-
-		protected int getR() {
-			return this.color.getRed();
-		}
-
-		protected int getG() {
-			return this.color.getGreen();
-		}
-
-		protected int getB() {
-			return this.color.getBlue();
-		}
-	}
-
-	protected T t;
-
 	/**
 	 * Create the panel.
 	 */
 
-	public ImagePanel() {
+	public ImagePanel(GraphicsManager manager, Component comp) {
+		this.imgDataManager = manager;
+		this.imgDataManager.addComponent(comp == null ? this : comp);
 		this.scale = new GraphicsScale(this);
-		try {
-			this.sorImage = ImageIO.read(new File("data\\nyo.jpg"));
-		} catch (IOException e1) {
-			e1.printStackTrace();
-		}
 
 		addMouseListener(new MouseAdapter() {
 			@Override
 			public void mousePressed(MouseEvent e) {
-				x = e.getX();
-				y = e.getY();
+				x = e.getXOnScreen();
+				y = e.getYOnScreen();
+				try {
+					imgDataManager.getInRange().setColor(new Robot().getPixelColor(x, y));
+					repaint();
+				} catch (AWTException e1) {
+					e1.printStackTrace();
+				}
 			}
 		});
 		setBorder(new BevelBorder(BevelBorder.LOWERED, null, null, null, null));
 	}
 
-	public T getT() {
-		return t;
-	}
-
-	public void setT(T t) {
-		this.t = t;
-	}
-
 	// 繪透明圖
 	protected void paintTramsparentImage(Graphics g) {
-		BufferedImage bi = new BufferedImage(sorImage.getWidth(null), sorImage.getHeight(null),
-				BufferedImage.TYPE_4BYTE_ABGR);
+		BufferedImage bi = new BufferedImage(this.imgDataManager.getSrcImage().getWidth(null),
+				this.imgDataManager.getSrcImage().getHeight(null), BufferedImage.TYPE_4BYTE_ABGR);
 		Graphics2D g2d = bi.createGraphics();
-		g2d.drawImage(this.sorImage, 0, 0, null);
+		g2d.drawImage(this.imgDataManager.getSrcImage(), 0, 0, null);
 
 		int alpha = 0;
 		for (int y = bi.getMinY(); y < bi.getHeight(); y++) {
@@ -149,9 +80,10 @@ public abstract class ImagePanel<T> extends JPanel {
 			}
 		}
 
-		this.desImage = bi;
+		this.imgDataManager.setDesImage(bi);
 		g.drawImage(bi, this.scale.getX1(), this.scale.getY1(), this.scale.getX2(), this.scale.getY2(), 0, 0,
-				this.sorImage.getWidth(null), this.sorImage.getHeight(null), null);
+				this.imgDataManager.getSrcImage().getWidth(null), this.imgDataManager.getSrcImage().getHeight(null),
+				null);
 	}
 
 	protected int getPureColor(int color, String rgbSign) {
@@ -187,33 +119,36 @@ public abstract class ImagePanel<T> extends JPanel {
 		g >>= 8;
 		int b = this.getPureColor(color, B);
 		// b >>= 0;
-		if (this.inRange.inRange(r, R) && this.inRange.inRange(g, G) && this.inRange.inRange(b, B)) {
+		if (this.imgDataManager.getInRange().inRange(r, R) && this.imgDataManager.getInRange().inRange(g, G)
+				&& this.imgDataManager.getInRange().inRange(b, B)) {
 			res = true;
 		}
 		return res;
 	}
 
 	protected void paintPrimaryImage(Graphics g) {
-		g.drawImage(this.sorImage, this.scale.getX1(), this.scale.getY1(), this.scale.getX2(), this.scale.getY2(), 0, 0,
-				this.sorImage.getWidth(null), this.sorImage.getHeight(null), null);
-
+		g.drawImage(this.imgDataManager.getSrcImage(), this.scale.getX1(), this.scale.getY1(), this.scale.getX2(),
+				this.scale.getY2(), 0, 0, this.imgDataManager.getSrcImage().getWidth(null),
+				this.imgDataManager.getSrcImage().getHeight(null), null);
 	}
 
-	abstract protected ImageProcess paintImage(Graphics g);
-
-	protected void processImage(Graphics g) {
-		if (paintImage(g) == ImageProcess.Default) {
+	protected void paintImage(Graphics g, ImageProcess type) {
+		if (type == ImageProcess.Default) {
 			this.paintPrimaryImage(g);
-		} else {
+		} else if (type == ImageProcess.Transparence) {
 			this.paintTramsparentImage(g);
 		}
+	}
+
+	protected void processImage(Graphics g) {
+
 	}
 
 	@Override
 	protected void paintComponent(Graphics g) {
 		super.paintComponent(g);
 		this.mesh(g);
-		processImage(g);
+		paintImage(g, ImageProcess.Default);
 	}
 
 	protected void mesh(Graphics g) {
