@@ -3,19 +3,23 @@ package com.imageproduce.controller;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Image;
+import java.awt.image.RenderedImage;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.imageio.ImageIO;
+import javax.imageio.stream.ImageOutputStream;
 
 public class GraphicsManager {
+	public static final int DefaultRange=20;
 	private Image srcImage;
 	private Image desImage;
 	private String srcFName;
 	private String desFName;
-	private InRange inRange = new InRange(20);
+	private InRange inRange = new InRange(DefaultRange);
 	private List<Component> comps = new ArrayList<>();
 
 	public void addComponent(Component comp) {
@@ -77,6 +81,14 @@ public class GraphicsManager {
 
 	public void setDesImage(Image desImage) {
 		this.desImage = desImage;
+	}
+
+	public void output() {
+		try {
+			ImageIO.write((RenderedImage) this.desImage, "png", new FileOutputStream(this.desFName));
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 	public class InRange {

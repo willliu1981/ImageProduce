@@ -48,7 +48,7 @@ public abstract class ImagePanel extends JPanel {
 				y = e.getYOnScreen();
 				try {
 					imgDataManager.getInRange().setColor(new Robot().getPixelColor(x, y));
-					repaint();
+					imgDataManager.repaintComps();
 				} catch (AWTException e1) {
 					e1.printStackTrace();
 				}
@@ -59,31 +59,36 @@ public abstract class ImagePanel extends JPanel {
 
 	// 繪透明圖
 	protected void paintTramsparentImage(Graphics g) {
-		BufferedImage bi = new BufferedImage(this.imgDataManager.getSrcImage().getWidth(null),
-				this.imgDataManager.getSrcImage().getHeight(null), BufferedImage.TYPE_4BYTE_ABGR);
-		Graphics2D g2d = bi.createGraphics();
-		g2d.drawImage(this.imgDataManager.getSrcImage(), 0, 0, null);
+		try {
+			BufferedImage bi = new BufferedImage(this.imgDataManager.getSrcImage().getWidth(null),
+					this.imgDataManager.getSrcImage().getHeight(null), BufferedImage.TYPE_4BYTE_ABGR);
+			Graphics2D g2d = bi.createGraphics();
+			g2d.drawImage(this.imgDataManager.getSrcImage(), 0, 0, null);
 
-		int alpha = 0;
-		for (int y = bi.getMinY(); y < bi.getHeight(); y++) {
-			for (int x = bi.getMinX(); x < bi.getWidth(); x++) {
-				int color = bi.getRGB(x, y);
-				if (this.checkInRange(color)) {
-					alpha = 0;
-				} else {
-					alpha = 255;
+			int alpha = 0;
+			for (int y = bi.getMinY(); y < bi.getHeight(); y++) {
+				for (int x = bi.getMinX(); x < bi.getWidth(); x++) {
+					int color = bi.getRGB(x, y);
+					if (this.checkInRange(color)) {
+						alpha = 0;
+					} else {
+						alpha = 255;
+					}
+					alpha <<= 24;
+					color = this.getPureColor(color, OnlyRGB);
+					color |= alpha;
+					bi.setRGB(x, y, color);
 				}
-				alpha <<= 24;
-				color = this.getPureColor(color, OnlyRGB);
-				color |= alpha;
-				bi.setRGB(x, y, color);
 			}
+
+			this.imgDataManager.setDesImage(bi);
+			g.drawImage(bi, this.scale.getX1(), this.scale.getY1(), this.scale.getX2(), this.scale.getY2(), 0, 0,
+					this.imgDataManager.getSrcImage().getWidth(null), this.imgDataManager.getSrcImage().getHeight(null),
+					null);
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 
-		this.imgDataManager.setDesImage(bi);
-		g.drawImage(bi, this.scale.getX1(), this.scale.getY1(), this.scale.getX2(), this.scale.getY2(), 0, 0,
-				this.imgDataManager.getSrcImage().getWidth(null), this.imgDataManager.getSrcImage().getHeight(null),
-				null);
 	}
 
 	protected int getPureColor(int color, String rgbSign) {
@@ -113,13 +118,15 @@ public abstract class ImagePanel extends JPanel {
 
 	protected boolean checkInRange(int color) {
 		boolean res = false;
+		int a = this.getPureColor(color, A);
+		a >>= 24;
 		int r = this.getPureColor(color, R);
 		r >>= 16;
 		int g = this.getPureColor(color, G);
 		g >>= 8;
 		int b = this.getPureColor(color, B);
 		// b >>= 0;
-		if (this.imgDataManager.getInRange().inRange(r, R) && this.imgDataManager.getInRange().inRange(g, G)
+		if (a == 0 || this.imgDataManager.getInRange().inRange(r, R) && this.imgDataManager.getInRange().inRange(g, G)
 				&& this.imgDataManager.getInRange().inRange(b, B)) {
 			res = true;
 		}
@@ -127,9 +134,13 @@ public abstract class ImagePanel extends JPanel {
 	}
 
 	protected void paintPrimaryImage(Graphics g) {
-		g.drawImage(this.imgDataManager.getSrcImage(), this.scale.getX1(), this.scale.getY1(), this.scale.getX2(),
-				this.scale.getY2(), 0, 0, this.imgDataManager.getSrcImage().getWidth(null),
-				this.imgDataManager.getSrcImage().getHeight(null), null);
+		try {
+			g.drawImage(this.imgDataManager.getSrcImage(), this.scale.getX1(), this.scale.getY1(), this.scale.getX2(),
+					this.scale.getY2(), 0, 0, this.imgDataManager.getSrcImage().getWidth(null),
+					this.imgDataManager.getSrcImage().getHeight(null), null);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 	protected void paintImage(Graphics g, ImageProcess type) {
